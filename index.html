@@ -1,0 +1,923 @@
+<!DOCTYPE html>
+<html lang="fr">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Convertisseur de dimensions</title>
+  <style>
+    :root {
+      --card: #ffffff;
+      --text: #101828;
+      --muted: #5b6b8a;
+      --border: #d6dce6;
+      --accent: #2563eb;
+      --accent-soft: #e8f0ff;
+      --readonly: #eef2f7;
+      --soft-panel: #fbfcfe;
+      --danger: #b42318;
+    }
+
+    * { box-sizing: border-box; }
+
+    body {
+      margin: 0;
+      min-height: 100vh;
+      font-family: system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
+      background: linear-gradient(135deg, #f7f8fb, #edf1f7);
+      color: var(--text);
+      display: flex;
+      justify-content: center;
+      padding: 32px;
+    }
+
+    .app {
+      width: min(1080px, 100%);
+      background: var(--card);
+      border: 1px solid var(--border);
+      border-radius: 24px;
+      box-shadow: 0 24px 70px rgba(15, 23, 42, 0.10);
+      overflow: hidden;
+    }
+
+    header {
+      padding: 28px 32px 20px;
+      border-bottom: 1px solid var(--border);
+      background: #fff;
+    }
+
+    h1 {
+      margin: 0 0 8px;
+      font-size: clamp(1.6rem, 3vw, 2.2rem);
+      line-height: 1.1;
+    }
+
+    .intro {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.98rem;
+    }
+
+    main { padding: 28px 32px 32px; }
+
+    .section-title {
+      margin: 34px 0 16px;
+      padding-top: 28px;
+      border-top: 1px solid var(--border);
+    }
+
+    .section-title.first {
+      margin-top: 0;
+      padding-top: 0;
+      border-top: 0;
+    }
+
+    .section-title h2 {
+      margin: 0 0 6px;
+      font-size: 1.35rem;
+    }
+
+    .section-title p {
+      margin: 0;
+      color: var(--muted);
+      font-size: 0.94rem;
+    }
+
+    .settings,
+    .grid,
+    .percent-summary,
+    .line-summary {
+      display: grid;
+      grid-template-columns: repeat(3, minmax(220px, 1fr));
+      gap: 18px;
+    }
+
+    .settings { margin-bottom: 24px; }
+
+    .panel,
+    .summary-card,
+    .line-card {
+      background: var(--soft-panel);
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      padding: 18px;
+    }
+
+    .panel h3 {
+      margin: 0 0 14px;
+      font-size: 1.05rem;
+    }
+
+    .field { margin-bottom: 14px; }
+    .field:last-child { margin-bottom: 0; }
+
+    label {
+      display: block;
+      margin-bottom: 7px;
+      font-size: 0.9rem;
+      color: var(--muted);
+      font-weight: 650;
+    }
+
+    input[type="number"] {
+      width: 100%;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      padding: 12px 13px;
+      font-size: 1rem;
+      outline: none;
+      background: #fff;
+      color: var(--text);
+      transition: border-color 0.15s ease, box-shadow 0.15s ease, background 0.15s ease;
+    }
+
+    input[type="number"]:focus {
+      border-color: var(--accent);
+      box-shadow: 0 0 0 4px var(--accent-soft);
+    }
+
+    input[type="number"][readonly] {
+      background: var(--readonly);
+      color: #445166;
+      cursor: default;
+    }
+
+    input.active-source {
+      border-color: var(--accent);
+      background: #fff;
+    }
+
+    .unit-choice {
+      display: grid;
+      gap: 10px;
+    }
+
+    .unit-option {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+      padding: 10px 12px;
+      border: 1px solid var(--border);
+      border-radius: 13px;
+      background: #fff;
+      cursor: pointer;
+      user-select: none;
+    }
+
+    .unit-option input {
+      width: 17px;
+      height: 17px;
+      accent-color: var(--accent);
+    }
+
+    .unit-option input:disabled { cursor: not-allowed; }
+
+    .unit-option span {
+      font-weight: 700;
+      color: var(--text);
+    }
+
+    .unit-option.selected {
+      border-color: var(--accent);
+      background: var(--accent-soft);
+    }
+
+    .hint {
+      margin: 12px 0 0;
+      color: var(--muted);
+      font-size: 0.86rem;
+      line-height: 1.35;
+    }
+
+    .actions {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 12px;
+      align-items: center;
+      justify-content: space-between;
+      margin-top: 24px;
+      padding-top: 22px;
+      border-top: 1px solid var(--border);
+    }
+
+    .status {
+      color: var(--muted);
+      font-size: 0.92rem;
+    }
+
+    .buttons {
+      display: flex;
+      flex-wrap: wrap;
+      gap: 10px;
+      justify-content: flex-end;
+    }
+
+    button {
+      border: 0;
+      border-radius: 999px;
+      padding: 11px 18px;
+      cursor: pointer;
+      font-weight: 750;
+      background: var(--text);
+      color: white;
+    }
+
+    button:hover { transform: translateY(-1px); }
+    button.primary { background: var(--accent); }
+    button.secondary { background: #eef2f7; color: var(--text); }
+
+    .error {
+      color: var(--danger);
+      font-weight: 650;
+    }
+
+    .percent-table-wrap,
+    .line-table-wrap {
+      overflow-x: auto;
+      border: 1px solid var(--border);
+      border-radius: 18px;
+      background: var(--soft-panel);
+    }
+
+    table {
+      width: 100%;
+      border-collapse: collapse;
+      min-width: 760px;
+    }
+
+    th,
+    td {
+      padding: 14px;
+      border-bottom: 1px solid var(--border);
+      text-align: left;
+      vertical-align: middle;
+    }
+
+    th {
+      font-size: 0.88rem;
+      color: var(--muted);
+      background: #f5f7fb;
+    }
+
+    td:first-child,
+    th:first-child {
+      width: 140px;
+      font-weight: 750;
+      color: var(--text);
+    }
+
+    tr:last-child td { border-bottom: 0; }
+
+    .result-pill {
+      display: inline-flex;
+      align-items: center;
+      justify-content: center;
+      min-width: 110px;
+      padding: 10px 12px;
+      border-radius: 999px;
+      background: var(--accent-soft);
+      color: var(--accent);
+      font-weight: 800;
+    }
+
+    .percent-summary,
+    .line-summary { margin-top: 18px; }
+
+    .summary-card span,
+    .line-card span {
+      display: block;
+      color: var(--muted);
+      font-size: 0.86rem;
+      font-weight: 700;
+      margin-bottom: 6px;
+    }
+
+    .summary-card strong,
+    .line-card strong {
+      display: block;
+      font-size: 1.25rem;
+    }
+
+    .line-card small {
+      display: block;
+      color: var(--muted);
+      margin-top: 6px;
+      line-height: 1.35;
+    }
+
+    @media (max-width: 920px) {
+      .settings,
+      .grid,
+      .percent-summary,
+      .line-summary { grid-template-columns: 1fr; }
+    }
+
+    @media (max-width: 820px) {
+      body { padding: 16px; }
+      header,
+      main {
+        padding-left: 20px;
+        padding-right: 20px;
+      }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <header>
+      <h1>Convertisseur de dimensions</h1>
+      <p class="intro">Convertis des dimensions entre mm, cm et px, calcule une échelle cible, puis déduis automatiquement les valeurs utiles de trame selon le PPP.</p>
+    </header>
+
+    <main>
+      <section class="section-title first">
+        <h2>1. Conversion mm / cm / px</h2>
+        <p>Choisis l’unité de saisie, renseigne largeur et/ou hauteur, puis les autres unités sont calculées selon la résolution et l’échelle.</p>
+      </section>
+
+      <section class="settings" aria-label="Réglages de conversion">
+        <div class="panel">
+          <h3>Unité de saisie</h3>
+          <div class="unit-choice" role="radiogroup" aria-label="Unité utilisée comme source de calcul">
+            <label class="unit-option" data-group="source" data-unit="mm">
+              <input type="radio" name="sourceUnit" value="mm" checked>
+              <span>Millimètres</span>
+            </label>
+            <label class="unit-option" data-group="source" data-unit="cm">
+              <input type="radio" name="sourceUnit" value="cm">
+              <span>Centimètres</span>
+            </label>
+            <label class="unit-option" data-group="source" data-unit="px">
+              <input type="radio" name="sourceUnit" value="px">
+              <span>Pixels</span>
+            </label>
+          </div>
+          <p class="hint">Une seule unité pilote le calcul. Les autres champs sont verrouillés pour éviter les conflits de mise à jour.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Résolution</h3>
+          <div class="field">
+            <label for="ppi">Résolution pixels/pouce</label>
+            <input id="ppi" type="number" min="1" step="1" value="300" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Échelle</h3>
+          <div class="field">
+            <label for="scale">Agrandissement en %</label>
+            <input id="scale" type="number" min="0.01" step="0.01" value="100" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="effectivePpi">Résolution effective pixels/pouce</label>
+            <input id="effectivePpi" type="number" readonly tabindex="-1">
+          </div>
+        </div>
+      </section>
+
+      <section class="grid" aria-label="Dimensions converties">
+        <div class="panel">
+          <h3>Millimètres</h3>
+          <div class="field">
+            <label for="widthMm">Largeur en mm</label>
+            <input id="widthMm" data-axis="width" data-unit="mm" type="number" min="0" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="heightMm">Hauteur en mm</label>
+            <input id="heightMm" data-axis="height" data-unit="mm" type="number" min="0" step="0.01" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Centimètres</h3>
+          <div class="field">
+            <label for="widthCm">Largeur en cm</label>
+            <input id="widthCm" data-axis="width" data-unit="cm" type="number" min="0" step="0.01" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="heightCm">Hauteur en cm</label>
+            <input id="heightCm" data-axis="height" data-unit="cm" type="number" min="0" step="0.01" inputmode="decimal">
+          </div>
+        </div>
+
+        <div class="panel">
+          <h3>Pixels</h3>
+          <div class="field">
+            <label for="widthPx">Largeur en px</label>
+            <input id="widthPx" data-axis="width" data-unit="px" type="number" min="0" step="1" inputmode="decimal">
+          </div>
+          <div class="field">
+            <label for="heightPx">Hauteur en px</label>
+            <input id="heightPx" data-axis="height" data-unit="px" type="number" min="0" step="1" inputmode="decimal">
+          </div>
+        </div>
+      </section>
+
+      <div class="actions">
+        <p id="status" class="status">Prêt.</p>
+        <div class="buttons">
+          <button class="primary" id="calcBtn" type="button">Calculer</button>
+          <button class="secondary" id="resetBtn" type="button">Réinitialiser</button>
+          <button id="copyBtn" type="button">Copier les valeurs</button>
+        </div>
+      </div>
+
+      <section class="section-title">
+        <h2>2. Calcul cible</h2>
+        <p>Les valeurs cibles sont remplies automatiquement depuis le tableau 1, avec la même unité active. Renseigne la taille d’origine pour obtenir le pourcentage d’agrandissement à appliquer.</p>
+      </section>
+
+      <section class="settings" aria-label="Réglages du calcul cible">
+        <div class="panel">
+          <h3>Unité cible</h3>
+          <div class="unit-choice" role="radiogroup" aria-label="Unité utilisée pour le calcul cible">
+            <label class="unit-option" data-group="target" data-unit="mm">
+              <input type="radio" name="targetUnit" value="mm" checked disabled>
+              <span>Millimètres</span>
+            </label>
+            <label class="unit-option" data-group="target" data-unit="cm">
+              <input type="radio" name="targetUnit" value="cm" disabled>
+              <span>Centimètres</span>
+            </label>
+            <label class="unit-option" data-group="target" data-unit="px">
+              <input type="radio" name="targetUnit" value="px" disabled>
+              <span>Pixels</span>
+            </label>
+          </div>
+          <p class="hint">Cette unité est synchronisée automatiquement avec l’unité de saisie du tableau 1.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Remplissage automatique</h3>
+          <p class="hint">La colonne “Cible” reprend automatiquement les largeur et hauteur du tableau 1. Tu n’as plus qu’à saisir les dimensions d’origine.</p>
+        </div>
+
+        <div class="panel">
+          <h3>Lecture</h3>
+          <p class="hint">100% = taille identique. 200% = deux fois plus grand. 50% = deux fois plus petit. Si largeur et hauteur diffèrent, l’agrandissement n’est pas homogène.</p>
+        </div>
+      </section>
+
+      <div class="percent-table-wrap">
+        <table aria-label="Tableau de calcul cible">
+          <thead>
+            <tr>
+              <th>Dimension</th>
+              <th>Origine</th>
+              <th>Cible automatique</th>
+              <th>Agrandissement</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td>Largeur</td>
+              <td><input id="originalWidth" data-origin type="number" min="0" step="0.01" inputmode="decimal"></td>
+              <td><input id="targetWidth" type="number" readonly tabindex="-1"></td>
+              <td><span id="widthPercent" class="result-pill">-</span></td>
+            </tr>
+            <tr>
+              <td>Hauteur</td>
+              <td><input id="originalHeight" data-origin type="number" min="0" step="0.01" inputmode="decimal"></td>
+              <td><input id="targetHeight" type="number" readonly tabindex="-1"></td>
+              <td><span id="heightPercent" class="result-pill">-</span></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="percent-summary">
+        <div class="summary-card">
+          <span>Ratio largeur</span>
+          <strong id="widthRatio">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Ratio hauteur</span>
+          <strong id="heightRatio">-</strong>
+        </div>
+        <div class="summary-card">
+          <span>Échelle homogène conseillée</span>
+          <strong id="uniformScale">-</strong>
+        </div>
+      </div>
+
+      <div class="actions">
+        <p id="targetStatus" class="status">Prêt.</p>
+        <div class="buttons">
+          <button class="primary" id="targetCalcBtn" type="button">Calculer le pourcentage</button>
+          <button class="secondary" id="targetResetBtn" type="button">Réinitialiser ce tableau</button>
+        </div>
+      </div>
+
+      <section class="section-title">
+        <h2>3. Trame selon PPP</h2>
+        <p>Calcul automatique des valeurs utiles pour les réglages de trame, laser ou hachures : intervalle de ligne, lignes par mm et lignes par cm. Les calculs utilisent la résolution effective.</p>
+      </section>
+
+      <div class="line-summary">
+        <div class="line-card">
+          <span>Intervalle de ligne</span>
+          <strong id="lineIntervalMm">-</strong>
+          <small>Formule : 25,4 / PPP effectif</small>
+        </div>
+        <div class="line-card">
+          <span>Lignes par mm</span>
+          <strong id="linesPerMm">-</strong>
+          <small>Formule : PPP effectif / 25,4</small>
+        </div>
+        <div class="line-card">
+          <span>Lignes par cm</span>
+          <strong id="linesPerCm">-</strong>
+          <small>Formule : PPP effectif / 2,54</small>
+        </div>
+      </div>
+
+      <div class="line-table-wrap" style="margin-top:18px;">
+        <table aria-label="Tableau de trame selon PPP">
+          <thead>
+            <tr>
+              <th>PPP utilisé</th>
+              <th>Intervalle de ligne</th>
+              <th>Lignes par mm</th>
+              <th>Lignes par cm</th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr>
+              <td><span id="linePpiValue" class="result-pill">-</span></td>
+              <td><input id="lineIntervalInput" type="number" readonly tabindex="-1"></td>
+              <td><input id="linesPerMmInput" type="number" readonly tabindex="-1"></td>
+              <td><input id="linesPerCmInput" type="number" readonly tabindex="-1"></td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+
+      <div class="actions">
+        <p id="lineStatus" class="status">Les valeurs de trame se mettent à jour automatiquement depuis le PPP effectif.</p>
+      </div>
+    </main>
+  </div>
+
+  <script>
+    (function () {
+      "use strict";
+
+      var INCH_IN_MM = 25.4;
+      var currentUnit = "mm";
+
+      function byId(id) {
+        return document.getElementById(id);
+      }
+
+      function numberValue(input) {
+        if (!input) return null;
+        var raw = String(input.value || "").replace(",", ".").trim();
+        if (raw === "") return null;
+        var value = Number(raw);
+        return Number.isFinite(value) ? value : null;
+      }
+
+      function writeNumber(input, value, decimals) {
+        if (!input) return;
+        if (!Number.isFinite(value)) {
+          input.value = "";
+          return;
+        }
+        input.value = String(Number(value.toFixed(decimals)));
+      }
+
+      function writePixels(input, value) {
+        if (!input) return;
+        if (!Number.isFinite(value)) {
+          input.value = "";
+          return;
+        }
+        input.value = String(Math.round(value));
+      }
+
+      function formatNumber(value, decimals) {
+        if (!Number.isFinite(value)) return "-";
+        return String(Number(value.toFixed(decimals)));
+      }
+
+      function setText(id, text, error) {
+        var el = byId(id);
+        if (!el) return;
+        el.textContent = text;
+        el.classList.toggle("error", Boolean(error));
+      }
+
+      var field = {
+        width: {
+          mm: byId("widthMm"),
+          cm: byId("widthCm"),
+          px: byId("widthPx")
+        },
+        height: {
+          mm: byId("heightMm"),
+          cm: byId("heightCm"),
+          px: byId("heightPx")
+        }
+      };
+
+      var ppiInput = byId("ppi");
+      var scaleInput = byId("scale");
+      var effectivePpiInput = byId("effectivePpi");
+      var originalWidthInput = byId("originalWidth");
+      var originalHeightInput = byId("originalHeight");
+      var targetWidthInput = byId("targetWidth");
+      var targetHeightInput = byId("targetHeight");
+
+      function getPpi() {
+        var value = numberValue(ppiInput);
+        return value && value > 0 ? value : null;
+      }
+
+      function getScaleFactor() {
+        var value = numberValue(scaleInput);
+        return value && value > 0 ? value / 100 : null;
+      }
+
+      function getEffectivePpi() {
+        var ppi = getPpi();
+        var scale = getScaleFactor();
+        if (!ppi || !scale) return null;
+        return ppi / scale;
+      }
+
+      function updateEffectivePpi() {
+        var effective = getEffectivePpi();
+        writeNumber(effectivePpiInput, effective, 3);
+        updateLineCalculations(effective);
+        return effective;
+      }
+
+      function updateLineCalculations(effectivePpi) {
+        var linePpiValue = byId("linePpiValue");
+        var intervalInput = byId("lineIntervalInput");
+        var linesPerMmInput = byId("linesPerMmInput");
+        var linesPerCmInput = byId("linesPerCmInput");
+
+        if (!effectivePpi || effectivePpi <= 0) {
+          if (linePpiValue) linePpiValue.textContent = "-";
+          writeNumber(intervalInput, NaN, 3);
+          writeNumber(linesPerMmInput, NaN, 3);
+          writeNumber(linesPerCmInput, NaN, 3);
+          byId("lineIntervalMm").textContent = "-";
+          byId("linesPerMm").textContent = "-";
+          byId("linesPerCm").textContent = "-";
+          setText("lineStatus", "Indique un PPP et une échelle valides pour calculer la trame.", true);
+          return;
+        }
+
+        var intervalMm = INCH_IN_MM / effectivePpi;
+        var linesPerMm = effectivePpi / INCH_IN_MM;
+        var linesPerCm = effectivePpi / 2.54;
+
+        if (linePpiValue) linePpiValue.textContent = formatNumber(effectivePpi, 3) + " ppp";
+        writeNumber(intervalInput, intervalMm, 4);
+        writeNumber(linesPerMmInput, linesPerMm, 4);
+        writeNumber(linesPerCmInput, linesPerCm, 3);
+
+        byId("lineIntervalMm").textContent = formatNumber(intervalMm, 4) + " mm";
+        byId("linesPerMm").textContent = formatNumber(linesPerMm, 4);
+        byId("linesPerCm").textContent = formatNumber(linesPerCm, 3);
+        setText("lineStatus", "Trame calculée depuis le PPP effectif : " + formatNumber(effectivePpi, 3) + " pixels/pouce.", false);
+      }
+
+      function mmToPx(mm) {
+        var effective = getEffectivePpi();
+        if (!effective) return null;
+        return mm / INCH_IN_MM * effective;
+      }
+
+      function pxToMm(px) {
+        var effective = getEffectivePpi();
+        if (!effective) return null;
+        return px / effective * INCH_IN_MM;
+      }
+
+      function valueToMm(value, unit) {
+        if (unit === "mm") return value;
+        if (unit === "cm") return value * 10;
+        if (unit === "px") return pxToMm(value);
+        return null;
+      }
+
+      function setUnit(unit) {
+        currentUnit = unit;
+
+        document.querySelectorAll("input[name='sourceUnit']").forEach(function (input) {
+          input.checked = input.value === unit;
+        });
+
+        document.querySelectorAll(".unit-option[data-group='source']").forEach(function (label) {
+          label.classList.toggle("selected", label.getAttribute("data-unit") === unit);
+        });
+
+        document.querySelectorAll("input[data-axis][data-unit]").forEach(function (input) {
+          var active = input.getAttribute("data-unit") === unit;
+          input.readOnly = !active;
+          input.tabIndex = active ? 0 : -1;
+          input.classList.toggle("active-source", active);
+        });
+
+        document.querySelectorAll("input[name='targetUnit']").forEach(function (input) {
+          input.checked = input.value === unit;
+        });
+
+        document.querySelectorAll(".unit-option[data-group='target']").forEach(function (label) {
+          label.classList.toggle("selected", label.getAttribute("data-unit") === unit);
+        });
+      }
+
+      function calculateAxis(axis) {
+        var source = field[axis][currentUnit];
+        var sourceValue = numberValue(source);
+
+        if (sourceValue === null) {
+          Object.keys(field[axis]).forEach(function (unit) {
+            if (unit !== currentUnit) field[axis][unit].value = "";
+          });
+          return true;
+        }
+
+        var mm = valueToMm(sourceValue, currentUnit);
+        if (mm === null) return false;
+
+        var cm = mm / 10;
+        var px = mmToPx(mm);
+        if (px === null) return false;
+
+        if (currentUnit !== "mm") writeNumber(field[axis].mm, mm, 3);
+        if (currentUnit !== "cm") writeNumber(field[axis].cm, cm, 3);
+        if (currentUnit !== "px") writePixels(field[axis].px, px);
+
+        return true;
+      }
+
+      function getConvertedValue(axis) {
+        var input = field[axis][currentUnit];
+        return input ? input.value : "";
+      }
+
+      function syncTargetValues() {
+        targetWidthInput.value = getConvertedValue("width");
+        targetHeightInput.value = getConvertedValue("height");
+      }
+
+      function percentFrom(original, target) {
+        if (original === null || target === null) return null;
+        if (original <= 0 || target < 0) return null;
+        return target / original * 100;
+      }
+
+      function writePercent(id, value) {
+        var el = byId(id);
+        if (!el) return;
+        el.textContent = value === null ? "-" : formatNumber(value, 3) + "%";
+      }
+
+      function writeRatio(id, value) {
+        var el = byId(id);
+        if (!el) return;
+        el.textContent = value === null ? "-" : "x" + formatNumber(value / 100, 4);
+      }
+
+      function calculateTarget() {
+        var ow = numberValue(originalWidthInput);
+        var oh = numberValue(originalHeightInput);
+        var tw = numberValue(targetWidthInput);
+        var th = numberValue(targetHeightInput);
+
+        var wp = percentFrom(ow, tw);
+        var hp = percentFrom(oh, th);
+
+        writePercent("widthPercent", wp);
+        writePercent("heightPercent", hp);
+        writeRatio("widthRatio", wp);
+        writeRatio("heightRatio", hp);
+
+        var values = [];
+        if (wp !== null) values.push(wp);
+        if (hp !== null) values.push(hp);
+
+        if (values.length === 0) {
+          byId("uniformScale").textContent = "-";
+          setText("targetStatus", "Les valeurs cibles suivent le tableau 1. Renseigne la taille d’origine.", false);
+          return;
+        }
+
+        if (values.length === 1) {
+          byId("uniformScale").textContent = formatNumber(values[0], 3) + "%";
+          setText("targetStatus", "Calcul effectué sur une seule dimension en " + currentUnit + ".", false);
+          return;
+        }
+
+        var average = (wp + hp) / 2;
+        var diff = Math.abs(wp - hp);
+        byId("uniformScale").textContent = formatNumber(average, 3) + "%";
+
+        if (diff < 0.01) {
+          setText("targetStatus", "Agrandissement homogène : largeur et hauteur donnent le même pourcentage.", false);
+        } else {
+          setText("targetStatus", "Attention : largeur et hauteur donnent des pourcentages différents.", true);
+        }
+      }
+
+      function calculateAll() {
+        var effective = updateEffectivePpi();
+        if (!effective) {
+          setText("status", "La résolution et l’agrandissement doivent être supérieurs à zéro.", true);
+          return;
+        }
+
+        var okWidth = calculateAxis("width");
+        var okHeight = calculateAxis("height");
+        if (!okWidth || !okHeight) {
+          setText("status", "Impossible de calculer : vérifie la résolution, l’échelle et les valeurs.", true);
+          return;
+        }
+
+        var label = currentUnit === "mm" ? "millimètres" : currentUnit === "cm" ? "centimètres" : "pixels";
+        setText("status", "Calcul effectué depuis les " + label + ". Résolution effective : " + formatNumber(effective, 3) + " pixels/pouce.", false);
+
+        syncTargetValues();
+        calculateTarget();
+      }
+
+      function resetConverter() {
+        document.querySelectorAll("input[data-axis][data-unit]").forEach(function (input) {
+          input.value = "";
+        });
+        ppiInput.value = "300";
+        scaleInput.value = "100";
+        setUnit("mm");
+        calculateAll();
+      }
+
+      function resetTarget() {
+        originalWidthInput.value = "";
+        originalHeightInput.value = "";
+        syncTargetValues();
+        calculateTarget();
+        setText("targetStatus", "Origines réinitialisées. Les valeurs cibles suivent toujours le tableau 1.", false);
+      }
+
+      function copyValues() {
+        calculateAll();
+        var lines = [
+          "Largeur : " + (field.width.mm.value || "-") + " mm / " + (field.width.cm.value || "-") + " cm / " + (field.width.px.value || "-") + " px",
+          "Hauteur : " + (field.height.mm.value || "-") + " mm / " + (field.height.cm.value || "-") + " cm / " + (field.height.px.value || "-") + " px",
+          "Unité de saisie : " + currentUnit,
+          "Résolution native : " + (ppiInput.value || "-") + " pixels/pouce",
+          "Agrandissement : " + (scaleInput.value || "-") + "%",
+          "Résolution effective : " + (effectivePpiInput.value || "-") + " pixels/pouce",
+          "Intervalle de ligne : " + (byId("lineIntervalMm").textContent || "-"),
+          "Lignes par mm : " + (byId("linesPerMm").textContent || "-"),
+          "Lignes par cm : " + (byId("linesPerCm").textContent || "-")
+        ];
+        var text = lines.join(String.fromCharCode(10));
+
+        if (navigator.clipboard && navigator.clipboard.writeText) {
+          navigator.clipboard.writeText(text).then(function () {
+            setText("status", "Valeurs copiées dans le presse-papiers.", false);
+          }).catch(function () {
+            setText("status", "Impossible de copier automatiquement. Sélectionne les valeurs manuellement.", true);
+          });
+        } else {
+          setText("status", "Copie automatique non disponible dans ce navigateur.", true);
+        }
+      }
+
+      document.querySelectorAll("input[name='sourceUnit']").forEach(function (input) {
+        input.addEventListener("change", function () {
+          setUnit(input.value);
+          calculateAll();
+        });
+      });
+
+      document.querySelectorAll("input[data-axis][data-unit]").forEach(function (input) {
+        input.addEventListener("input", function () {
+          if (!input.readOnly) calculateAll();
+        });
+      });
+
+      document.querySelectorAll("input[data-origin]").forEach(function (input) {
+        input.addEventListener("input", calculateTarget);
+      });
+
+      ppiInput.addEventListener("input", calculateAll);
+      scaleInput.addEventListener("input", calculateAll);
+      byId("calcBtn").addEventListener("click", calculateAll);
+      byId("resetBtn").addEventListener("click", resetConverter);
+      byId("copyBtn").addEventListener("click", copyValues);
+      byId("targetCalcBtn").addEventListener("click", calculateTarget);
+      byId("targetResetBtn").addEventListener("click", resetTarget);
+
+      setUnit("mm");
+      calculateAll();
+    })();
+  </script>
+</body>
+</html>
