@@ -16,7 +16,7 @@ Fonctions :
 
 La version en ligne est disponible via GitHub Pages :
 
-https://tonpseudo.github.io/dimension-converter/
+https://orion4d.github.io/dimension-converter/
 
 ## Utilisation
 
